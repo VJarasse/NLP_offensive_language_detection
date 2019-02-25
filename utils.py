@@ -5,9 +5,21 @@ import random
 
 
 def accuracy(output, target):
-    output = torch.round(torch.sigmoid(output))
+    output = output.argmax(dim = 1, keepdim=True)
+    target = target.argmax(dim = 1, keepdim=True)
     correct = (output == target).float()
-    acc = correct.sum( ) /len(correct)
+    acc = float(correct.sum( ) /len(output) )
+    return acc
+
+
+def eval(model, dataloader):
+    correct = 0.
+    size = 0.
+    for batch_idx, (embedding, target) in enumerate(dataloader):
+        size += len(target)
+        prediction = model(embedding).squeeze(1)
+        correct += accuracy(prediction, target) * len(target)
+    acc = float(correct / size) * 100
     return acc
 
 

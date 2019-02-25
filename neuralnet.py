@@ -1,36 +1,39 @@
-import torch
-from torch.autograd import Variable
-import numpy as np
 import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
 
 
 class FFNN(nn.Module):
 
-    def __init__(self, embedding_dim, hidden_dim, vocab_size, max_len, num_classes):
+    def __init__(self):
+        super().__init__()
+        embedding_dim = 100
+        h_dim1 = 512
+        h_dim2 = 256
+        h_dim3 = 64
+        num_classes = 2
 
-        super(FFNN, self).__init__()
+        # hidden layers
+        self.layer1 = nn.Sequential(
+            nn.Linear(in_features=embedding_dim, out_features=h_dim1, bias=True),
+            nn.ReLU()
+        )
 
-        # embedding (lookup layer) layer
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.layer2 = nn.Sequential(
+            nn.Linear(in_features=h_dim1, out_features=h_dim2, bias=True),
+            nn.ReLU()
+        )
 
-        # hidden layer
-        self.fc1 = nn.Linear(embedding_dim, hidden_dim)
-
-        # activation
-        self.relu1 = nn.ReLU()
+        self.layer3 = nn.Sequential(
+            nn.Linear(in_features=h_dim2, out_features=h_dim3, bias=True),
+            nn.ReLU()
+        )
 
         # output layer
-        self.fc2 = nn.Linear(hidden_dim, num_classes)
+        self.layer4 = nn.Linear(in_features=h_dim3, out_features=num_classes, bias=True)
 
     def forward(self, x):
-
-        embedded = self.embedding(x)
-        # we average the embeddings of words in a sentence
-        averaged = embedded.mean(1)
-        # (batch size, max sent length, embedding dim) to (batch size, embedding dim)
-        out = self.fc1(averaged)
-        out = self.relu1(out)
-        out = self.fc2(out)
+        x = x.view(-1, 1, 100)
+        out = self.layer1(x)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
         return out

@@ -5,7 +5,6 @@ class Corpus:
         self.corpus = dataframe[label]
         self.tokenized_corpus = self.tokenize()
         self.clean_vocabulary = self.extract_voc()
-        #self.clean_voc = self.clean_vocabulary()
 
     def tokenize(self, sep=' '):
         tokenized_corpus = []
@@ -38,7 +37,7 @@ class Corpus:
         clean_token = token.lower()
         if len(clean_token) < 2:
             return clean_token
-        out_char = ['.', ',', '?', "'", '!', ";"]
+        out_char = ['.', ',', '?', '!', ";", "#", "\"", "*", "%", "-", "_", "+", "/" "=", "@", "(", ")", "’", "”", "'"]
         chunk_1 = [clean_token]
         chunk_2 = []
         for sep in out_char:
@@ -48,7 +47,23 @@ class Corpus:
             chunk_2 = []
         output = []
         for element in chunk_1:
-            if element != "":
+            if len(element) > 0:
+                '''
+                if element[-2:] == "\''s":
+                    output.append(element[:-2])
+                    output.append("is")
+                elif element[-3:] == "\'re":
+                    output.append(element[:-3])
+                    output.append("are")
+                elif element[-2:] == "\'m":
+                    output.append(element[:-2])
+                    output.append("am")
+                elif element[0] == "\"":
+                    output.append(element[1:])
+                elif element[-1] == "\"":
+                    output.append(element[:-1])
+                else:
+                '''
                 output.append(element)
         return output
 
