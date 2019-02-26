@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from tqdm import tqdm
 import codecs
@@ -58,3 +59,10 @@ def get_model_inputs(tokenized_corpus, word2idx, labels, max_len):
     label_tensor = torch.FloatTensor(labels)
 
     return sent_tensor, label_tensor
+
+
+def one_hot_encoding(labels):
+    labels_ = torch.zeros(len(labels), int(np.amax(labels) + 1))
+    for idx, label in enumerate(labels):
+        labels_[idx, int(label)] = 1.
+    return labels_
