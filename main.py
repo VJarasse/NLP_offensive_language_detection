@@ -210,3 +210,102 @@ for epoch in range(1, epochs + 1):
 # <------ Test Data -------> #
 accuracy_test = eval(model, test_loader)
 print("Accuracy on test dataset : %.2f" % accuracy_test, "%")
+
+
+#######################################
+# <------ SECOND MODEL : CNN -------> #
+#######################################
+
+def embed_corpus_2(emb_dict, corpus):
+
+    tweet_lengths = [len(tweet) for tweet in corpus]
+    max_len = np.max(np.array(tweet_lengths))
+
+    # Prepare container for tweet embeddings
+    inputs_ = torch.zeros((len(corpus), max_len, 100))
+
+    # Counter for debugging purposes
+    count_not_found = 0.
+    total_count = 0.
+
+    # We loop over all the tweets in the corpus
+    for idx, tweet in enumerate(corpus):
+        # and over all the words in a tweet
+        for idx2, word in enumerate(tweet):
+            total_count += 1
+            if word in emb_dict.keys():
+                inputs_[idx, idx2] = torch.Tensor(emb_dict[word])
+            else:
+                count_not_found += 1
+    ratio = (count_not_found / total_count) * 100
+
+    print("Percentage of not recognised words (those we do not have an embedding for) : %.2f" % ratio, "%")
+    # We return the embedded corpus
+    return inputs_
+
+
+
+#  <----------- Global variables for the NN and the training --------------->
+epochs=20
+
+EMBEDDING_DIM = 100
+OUTPUT_DIM = 2
+
+#the hyperparameters specific to CNN
+
+# we define the number of filters
+N_OUT_CHANNELS = 100
+
+# we define the window size
+WINDOW_SIZE = 1
+
+# we apply the dropout with the probability 0.5
+DROPOUT = 0.5
+
+#  <----------- END Global variables for the NN and the training --------------->
+
+#  <----------- Training of the CNN --------------->
+
+
+model = CNN(EMBEDDING_DIM, N_OUT_CHANNELS, WINDOW_SIZE, OUTPUT_DIM, DROPOUT)
+
+optimizer = optim.SGD(model.parameters(), lr=0.01)
+loss_fn = nn.BCELoss()
+
+emb_corpus = embed_corpus_2(emb_dict, tokenized_corpus)
+train_loader, valid_loader, test_loader = data_loader(emb_corpus, label1, 32, 1)
+
+for epoch in range(1, epochs + 1):
+    loss_history = []
+    acc_history = []
+    for batch_idx, (embedding, target) in enumerate(train_loader):
+
+        model.train()
+
+        # we zero the gradients as they are not removed automatically
+        optimizer.zero_grad()
+
+        # squeeze is needed as the predictions are initially size (batch size, 1) and we need to remove the dimension of size 1
+        predictions = model(embedding).squeeze(1)
+        loss = nn.BCELoss()(predictions, target)
+        loss_history.append(float(loss))
+        acc_history.append(accuracy(predictions, target))
+
+        # calculate the gradient of each parameter
+        loss.backward()
+
+        # update the parameters using the gradients and optimizer algorithm
+        optimizer.step()
+
+    epoch_loss = np.array(loss_history).mean()
+    epoch_acc = np.array(acc_history).mean()
+
+    val_acc = eval(model, valid_loader)
+    print(f'| Epoch: {epoch:02} | Train Loss: {epoch_loss:.3f} | Train Acc: {epoch_acc*100:.2f}%')
+    print("Valid accuracy :", val_acc)
+
+#  <----------- END Training of the CNN --------------->
+
+# <------ Test Data -------> #
+accuracy_test = eval(model, test_loader)
+print("Accuracy on test dataset : %.2f" % accuracy_test, "%")
