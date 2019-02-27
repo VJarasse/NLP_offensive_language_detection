@@ -90,3 +90,47 @@ class CNN(nn.Module):
         preds = torch.sigmoid(preds)
 
         return preds
+
+
+class BiLSTM(nn.Module):
+
+    def __init__(self, embedding_dim, hidden_dim, output_dim, dropout, seq_len):
+        super(BiLSTM, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.seq_len = seq_len
+        self.batch_size = 32
+
+        # The LSTM takes word embeddings as inputs, and outputs hidden states
+        # with dimensionality hidden_dim.
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim,
+                            dropout=dropout, batch_first=True, bidirectional=True)
+
+        # The linear layer that maps from hidden state space to tag space
+        self.linear = nn.Linear(seq_len * hidden_dim * 2, output_dim)
+        self.hidden = self.init_hidden()
+
+    def init_hidden(self):
+        # Before we've done anything, we dont have any hidden state.
+        # Refer to the Pytorch documentation to see exactly
+        # why they have this dimensionality.
+        # The axes semantics are (num_layers * num_directions, minibatch_size, hidden_dim)
+        return (autograd.Variable(torch.zeros(2, self.batch_size, self.hidden_dim).to(device)),
+                autograd.Variable(torch.zeros(2, self.batch_size, self.hidden_dim).to(device)))
+
+    def forward(self, x):
+        if x.shape[0] != self.batch_size:
+            pad = torch.zeros((self.batch_size - x.shape[0], x.shape[1], x.shape[2]))
+            x = torch.cat((x, pad), dim=0)
+        # Shape of x  torch.Size([32, 105, 100])
+        # Shape of LSTM out  torch.Size([32, 105, 40])
+
+        # lstm out should be (seq_len, batch, num_directions * hidden_size)
+        # elements of self.hidden should be (num_layers * num_directions, batch, hidden_size)
+
+        lstm_out, self.hidden = self.lstm(x, self.hidden)
+        lstm_out = lstm_out.contiguous()
+        lstm_out = lstm_out.view(-1, self.seq_len * 2 * self.hidden_dim)
+
+        tag_space = self.linear(lstm_out)
+        tag_scores = torch.sigmoid(tag_space)
+        return tag_scores
