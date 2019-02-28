@@ -388,3 +388,68 @@ for epoch in range(1, epochs + 1):
 
 accuracy_test = eval_lstm(model, test_loader, batch_size)
 print("Accuracy on test dataset : %.2f" % accuracy_test, "%")
+
+
+##################################################
+# <------ FOURTH MODEL : bi-LSTM + Conv -------> #
+##################################################
+
+batch_size = 32
+epochs=10
+
+EMBEDDING_DIM = 100
+HIDDEN_DIM = 10
+OUTPUT_DIM = 2
+DROPOUT = 0.5
+SEQ_LEN = 105
+CHANNELS = 16
+WINDOW_SIZE = 1
+
+model = BiLSTMConv(EMBEDDING_DIM, HIDDEN_DIM, OUTPUT_DIM, DROPOUT,
+                   SEQ_LEN, CHANNELS, WINDOW_SIZE).to(device)
+
+optimizer = optim.Adam(model.parameters())
+loss_fn = nn.BCELoss()
+
+emb_corpus = embed_corpus_2(emb_dict, tokenized_corpus)
+train_loader, valid_loader, test_loader = data_loader(emb_corpus, label1, batch_size, 1)
+
+for epoch in range(1, epochs + 1):
+    loss_history = []
+    acc_history = []
+    for batch_idx, (embedding, target) in enumerate(train_loader):
+        model.train()
+
+        # we zero the gradients as they are not removed automatically
+        optimizer.zero_grad()
+
+        # Also, we need to clear out the hidden state of the LSTM,
+        # detaching it from its history on the last instance.
+        model.hidden = model.init_hidden()
+
+        # Send input data to GPU
+        embedding = embedding.to(device)
+
+        # squeeze is needed as the predictions are initially size (batch size, 1) and we need to remove the dimension of size 1
+        # Have to transpose batch and sequence dimensions for nn.LSTM
+        # embedding = torch.transpose(embedding, 0, 1)
+        predictions = model(embedding).squeeze(1)
+        loss = nn.BCELoss()(predictions, target.to(device))
+        loss_history.append(float(loss))
+        acc_history.append(accuracy(predictions, target.to(device)))
+
+        # calculate the gradient of each parameter
+        loss.backward()
+
+        # update the parameters using the gradients and optimizer algorithm
+        optimizer.step()
+
+    epoch_loss = np.array(loss_history).mean()
+    epoch_acc = np.array(acc_history).mean()
+    print("End of epoch")
+    val_acc = eval_lstm(model, valid_loader, batch_size)
+    print(f'| Epoch: {epoch:02} | Train Loss: {epoch_loss:.3f} | Train Acc: {epoch_acc*100:.2f}%')
+    print("Valid accuracy :", val_acc)
+
+accuracy_test = eval_lstm(model, test_loader, batch_size)
+print("Accuracy on test dataset : %.2f" % accuracy_test, "%")
